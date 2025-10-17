@@ -82,9 +82,10 @@ class SchedaPodoposturale(BaseModel):
     deviazioni: Optional[str] = None
 
     # Baropodometria
-    baro_statico: Optional[str] = None
-    baro_dinamico: Optional[str] = None
-    pressioni_di_picco: Optional[str] = None
+    section("Baropodometria",
+        f"Statico: {s.baro_statico or ''}\n"
+        f"Dinamico: {s.baro_dinamico or ''}\n"
+        f"Pressioni di picco: {s.pressioni_di_picco or ''}")
 
     # Test clinici
     test_equinismo: Optional[str] = None
