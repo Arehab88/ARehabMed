@@ -1,0 +1,5 @@
+streamlit
+reportlab
+pydantic
+qrcode[pil]
+Pillow
