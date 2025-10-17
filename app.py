@@ -1,69 +1,62 @@
-def crea_pdf_scheda(s, logo_bytes: bytes | None) -> bytes:
-    styles = getSampleStyleSheet()
+# app.py — A-Rehab Med (versione semplificata, login disattivato)
+import io
+from datetime import date
+from typing import List, Optional
+from dataclasses import dataclass
+import streamlit as st
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+from reportlab.lib import colors
+
+st.set_page_config(page_title="A-Rehab Med", page_icon="🦶", layout="wide")
+
+st.image("https://raw.githubusercontent.com/arehab88/ARehabMed/main/logo_arehab_med.png", width=200)
+st.title("A-Rehab Med — Scheda Podoposturale + Esercizi")
+st.caption("Un passo verso la tua salute — versione semplificata (login disattivato)")
+
+# ---------------- DATI BASE ----------------
+nome = st.text_input("Nome")
+cognome = st.text_input("Cognome")
+dolore_vas = st.slider("VAS dolore (0-10)", 0, 10, 3)
+motivo = st.text_area("Motivo della visita")
+note = st.text_area("Note cliniche / osservazioni")
+
+# ---------------- PDF EXPORT ----------------
+def crea_pdf(nome, cognome, vas, motivo, note):
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    styles = getSampleStyleSheet()
+    doc = SimpleDocTemplate(buf, pagesize=A4)
     elems = []
-
-    # Logo + Slogan
-    if logo_bytes:
-        try:
-            elems += [RLImage(io.BytesIO(logo_bytes), width=140, height=50), Spacer(1, 4)]
-        except Exception:
-            pass
-
-    elems += [Paragraph("<b>A-Rehab Med</b> — Un passo verso la tua salute", styles["Title"]), Spacer(1, 6)]
-
-    # Tabella anagrafica
-    dati = [
-        ["Data", str(s.data_compilazione)],
-        ["Paziente", f"{s.nome} {s.cognome}"],
-        ["Nascita", str(s.data_nascita or "")],
-        ["Sesso", s.sesso or ""],
-        ["Telefono", s.telefono or ""],
-        ["Email", s.email or ""],
-        ["Sport", s.sport or ""],
-        ["Professione", s.professione or ""],
+    elems.append(Paragraph("<b>A-Rehab Med</b> — Un passo verso la tua salute", styles["Title"]))
+    elems.append(Spacer(1, 12))
+    data = [
+        ["Nome", nome],
+        ["Cognome", cognome],
+        ["VAS dolore", f"{vas}/10"],
+        ["Motivo visita", motivo],
+        ["Note cliniche", note],
     ]
-    t = Table(dati, hAlign='LEFT', colWidths=[100, 380])
-    t.setStyle(TableStyle([
+    table = Table(data, colWidths=[120, 380])
+    table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),0.25,colors.grey),
-        ('BACKGROUND',(0,0),(-1,0),colors.whitesmoke),
-        ('VALIGN',(0,0),(-1,-1),'TOP')
+        ('BACKGROUND',(0,0),(-1,0),colors.whitesmoke)
     ]))
-    elems += [t, Spacer(1, 10)]
-
-    def section(title, body):
-        elems.extend([
-            Paragraph(f"<b>{title}</b>", styles["Heading3"]),
-            Spacer(1, 2),
-            Paragraph(body.replace("\n","<br/>"), styles["BodyText"]),
-            Spacer(1, 8)
-        ])
-
-    # Sezioni
-    section("Motivo della visita", f"Motivi: {', '.join(s.motivo) if s.motivo else ''}\nVAS: {s.dolore_vas}/10\nInsorgenza: {s.insorgenza or ''} | Lato: {s.lato or ''}")
-    section("Anamnesi", f"Patologie: {s.patologie or ''}\nInterventi/Traumi: {s.interventi or ''}\nFarmaci: {s.farmaci or ''}\nAllergie: {s.allergie or ''}")
-    section("Esame obiettivo – Statica", f"Appoggio: {s.appoggio or ''} | Retropiede: {s.retopiede or ''} | Avampiede: {s.avampiede or ''}\nArco: {s.arco_plantare or ''} | Dismetria: {s.dismetria or ''}\nValgismo alluce: {s.valgismo_alluce or ''} | Dita a martello: {s.dita_martello or ''}")
-    section("Dinamica/Andatura", f"Cadenza: {s.cadenza or ''} | Lunghezza passo: {s.lunghezza_passo or ''}\nDeviazioni: {s.deviazioni or ''}")
-
-    # 🔹 CORRETTO — sezione Baropodometria
-    section("Baropodometria",
-            f"Statico: {s.baro_statico or ''}\n"
-            f"Dinamico: {s.baro_dinamico or ''}\n"
-            f"Pressioni di picco: {s.pressioni_di_picco or ''}")
-
-    section("Test clinici", f"Equinismo: {s.test_equinismo or ''} | Tibiale post.: {s.test_tibiale_post or ''} | Flessibilità arco: {s.test_flessibilita_arco or ''}\nROM caviglia: {s.ROM_caviglia or ''}\nNote: {s.note_test or ''}")
-    section("Valutazione posturale globale", f"{s.postura or ''}\nAltri segmenti: {s.altri_segmenti or ''}")
-    section("Diagnosi / Obiettivi", f"Diagnosi: {s.diagnosi or ''}\nObiettivi: {s.obiettivi or ''}")
-    section("Trattamento", f"Ortesi/Plantari: {s.ortesi or ''}\nEsercizi (note generali): {s.esercizi or ''}\nCalzature: {s.calzature or ''}\nEducazione: {s.educazione or ''}\nFollow-up: {s.follow_up_settimane} settimane")
-
-    tips = s.suggerimenti_automatici()
-    if tips:
-        section("Suggerimenti automatici", "• " + "<br/>• ".join(tips))
-
-    section("Note/Disclaimer", "Documento destinato esclusivamente al paziente indicato. In caso di dolore >3/10 o comparsa di nuovi sintomi, sospendere e contattare il professionista.")
-
+    elems.append(table)
+    elems.append(Spacer(1, 12))
+    elems.append(Paragraph("© 2025 A-Rehab Med", styles["Normal"]))
     doc.build(elems)
     pdf = buf.getvalue()
     buf.close()
     return pdf
+
+if st.button("📄 Esporta PDF di prova"):
+    pdf = crea_pdf(nome, cognome, dolore_vas, motivo, note)
+    st.download_button(
+        label="⬇️ Scarica Scheda (PDF)",
+        data=pdf,
+        file_name=f"scheda_{cognome}_{nome}.pdf",
+        mime="application/pdf"
+    )
+
+st.success("✅ App attiva senza login. Compila e genera PDF.")
